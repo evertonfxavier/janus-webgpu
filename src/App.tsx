@@ -14,14 +14,12 @@ const IS_WEBGPU_AVAILABLE = !!(navigator as any).gpu;
 const STICKY_SCROLL_THRESHOLD = 120;
 
 function App() {
-  // Create a reference to the worker object.
   const worker = useRef<any>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const imageUploadRef = useRef(null);
 
-  // Model loading and progress
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | null>(
     null
   );
@@ -30,7 +28,6 @@ function App() {
   const [progressItems, setProgressItems] = useState<any[]>([]);
   const [isRunning, setIsRunning] = useState(false);
 
-  // Inputs and outputs
   const [input, setInput] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [messages, setMessages] = useState<
@@ -56,8 +53,6 @@ function App() {
   }
 
   function onInterrupt() {
-    // NOTE: We do not set isRunning to false here because the worker
-    // will send a 'complete' message when it is done.
     worker.current.postMessage({ type: "interrupt" });
   }
 
@@ -74,20 +69,16 @@ function App() {
     resizeInput();
   }, [input]);
 
-  // We use the `useEffect` hook to setup the worker as soon as the `App` component is mounted.
   useEffect(() => {
-    // Create the worker if it does not yet exist.
     if (!worker.current) {
       worker.current = new Worker(new URL("./worker.js", import.meta.url), {
         type: "module",
       });
-      worker.current.postMessage({ type: "check" }); // Do a feature check
+      worker.current.postMessage({ type: "check" }); 
     }
 
-    // Create a callback function for messages from the worker thread.
     const onMessageReceived = (e: any) => {
       switch (e.data.status) {
-        // WebGPU feature checking
         case "success":
           setStatus("idle");
           break;
@@ -96,7 +87,6 @@ function App() {
           break;
 
         case "loading":
-          // Model file start load: add a new progress item to the list.
           setStatus("loading");
           setLoadingMessage(e.data.data);
           break;
@@ -106,7 +96,6 @@ function App() {
           break;
 
         case "progress":
-          // Model file progress: update one of the progress items.
           setProgressItems((prev) =>
             prev.map((item) => {
               if (item.file === e.data.file) {
@@ -118,20 +107,17 @@ function App() {
           break;
 
         case "done":
-          // Model file loaded: remove the progress item from the list.
           setProgressItems((prev) =>
             prev.filter((item) => item.file !== e.data.file)
           );
           break;
 
         case "ready":
-          // Pipeline ready: the worker is ready to accept messages.
           setStatus("ready");
           break;
 
         case "start":
           {
-            // Start generation
             setMessages((prev) => [
               ...prev,
               { role: "assistant", content: "", image: null },
@@ -140,7 +126,6 @@ function App() {
           break;
 
         case "text-update": {
-          // Parse messages // Generation update: update the output text.
           const { output, tps, numTokens } = e.data;
           setTps(tps);
           setNumTokens(numTokens);
@@ -161,7 +146,6 @@ function App() {
           const { blob, progress, time } = e.data;
 
           if (blob) {
-            // Add image to the last message
             const url = URL.createObjectURL(blob);
             setMessages((prev) => {
               const cloned = [...prev];
@@ -180,7 +164,6 @@ function App() {
         }
 
         case "complete":
-          // Generation complete: re-enable the "Generate" button
           setIsRunning(false);
           break;
       }
@@ -190,25 +173,20 @@ function App() {
       console.error("Worker error:", e);
     };
 
-    // Attach the callback function as an event listener.
     worker.current.addEventListener("message", onMessageReceived);
     worker.current.addEventListener("error", onErrorReceived);
 
-    // Define a cleanup function for when the component is unmounted.
     return () => {
       worker.current.removeEventListener("message", onMessageReceived);
       worker.current.removeEventListener("error", onErrorReceived);
     };
   }, []);
 
-  // Send the messages to the worker thread whenever the `messages` state changes.
   useEffect(() => {
     if (messages.filter((x) => x.role === "user").length === 0) {
-      // No user messages yet: do nothing.
       return;
     }
     if (messages.at(-1)?.role === "assistant") {
-      // Do not update if the last message is from the assistant
       return;
     }
     setTps(null);
@@ -240,10 +218,6 @@ function App() {
               className="block"
             ></img>
             <h1 className="text-5xl font-bold mb-1">Janus WebGPU</h1>
-            <h2 className="font-semibold">
-              A novel autoregressive framework for unified multimodal
-              understanding and generation.
-            </h2>
           </div>
 
           <div className="flex flex-col items-center px-4">
@@ -299,7 +273,6 @@ function App() {
                   worker.current.postMessage({ type: "load" });
                   setStatus("loading");
                 }}
-                // disabled={status === null || status === "loading"}
               >
                 {status === null ? "Running feature checks..." : "Load model"}
               </button>
@@ -469,7 +442,7 @@ function App() {
                 e.key === "Enter" &&
                 !e.shiftKey
               ) {
-                e.preventDefault(); // Prevent default behavior of Enter key
+                e.preventDefault();
                 onEnter(input, image);
               }
             }}
