@@ -137,10 +137,12 @@ async function generate(messages: Message[]): Promise<void> {
   const [processor, model] = await ImageGenerationPipeline.getInstance();
   console.log({ processor });
 
+  const hanldeProcessor: any = processor;
+
   if (message.content.startsWith(IMAGE_GENERATION_COMMAND_PREFIX)) {
     const text = message.content.replace(IMAGE_GENERATION_COMMAND_PREFIX, "");
     const conversation = [{ role: "User", content: text }];
-    const inputs = await processor(conversation, {
+    const inputs = await hanldeProcessor(conversation, {
       chat_template: "text_to_image",
     });
 
@@ -148,7 +150,7 @@ async function generate(messages: Message[]): Promise<void> {
       self.postMessage({ status: "image-update", ...output });
     };
 
-    const num_image_tokens = processor.num_image_tokens;
+    const num_image_tokens = hanldeProcessor.num_image_tokens;
     const streamer = new ProgressStreamer(num_image_tokens, callback_function);
 
     const outputs = await model.generate_images({
@@ -162,7 +164,7 @@ async function generate(messages: Message[]): Promise<void> {
     const blob = await outputs[0].toBlob();
     self.postMessage({ status: "image-update", blob });
   } else {
-    const inputs = await processor(
+    const inputs = await hanldeProcessor(
       message.image
         ? [
             {
@@ -194,7 +196,7 @@ async function generate(messages: Message[]): Promise<void> {
       self.postMessage({ status: "text-update", output, tps, numTokens });
     };
 
-    const streamer = new TextStreamer(processor.tokenizer, {
+    const streamer = new TextStreamer(hanldeProcessor.tokenizer, {
       skip_prompt: true,
       skip_special_tokens: true,
       callback_function,
